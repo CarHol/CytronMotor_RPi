@@ -50,7 +50,7 @@ class CytronMD():
         elif speed < -255:
             speed = -255
 
-        if self.mode == Mode.PWM_DIR:
+        if self.mode == Mode.DIR:
             if speed >= 0:
                 self.gpio.output(self.pin2, self.gpio.LOW)
             else:
@@ -66,7 +66,7 @@ class CytronMD():
             pwm = self.gpio.PWM(self._pin1, 100)  # 100 Hz frequency
             pwm.start(pwm_duty_cycle)
 
-        elif self.mode == Mode.PWM_PWM:
+        elif self.mode == Mode.PWM:
             if speed >= 0:
                 self.gpio.output(self.pin1, self.gpio.HIGH)
                 self.gpio.output(self.pin2, self.gpio.LOW)
