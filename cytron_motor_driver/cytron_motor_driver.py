@@ -1,15 +1,4 @@
 from enum import Enum
-import sys
-
-def eprint(*args, **kwargs):
-    """
-    Print to standard error stream.
-    
-    Args:
-        *args: Variable-length argument list.
-        **kwargs: Arbitrary keyword arguments.
-    """
-    print(*args, file=sys.stderr, **kwargs)
 
 class Mode(Enum):
     PWM = 1
@@ -36,6 +25,18 @@ class CytronMD():
         gpio.setup(pin1, gpio.OUT)
         gpio.setup(pin2, gpio.OUT)
 
+        # Always start PWM for pin1, as it's needed for speed control
+        self.pwm1 = gpio.PWM(pin1, 100)  # 100 Hz frequency
+        self.pwm1.start(0)  # Initialize with 0% duty cycle
+        gpio.output(pin2, gpio.LOW)
+
+        if mode == Mode.DIR:
+            gpio.output(pin2, gpio.LOW)
+        elif mode == Mode.PWM:
+            gpio.output(pin2, gpio.LOW)
+            gpio.output(pin1, gpio.HIGH)
+
+
     def setSpeed(self, speed):
         """
         Set the motor speed.
@@ -56,30 +57,22 @@ class CytronMD():
             else:
                 self.gpio.output(self.pin2, self.gpio.HIGH)
 
-            if speed >= 0:
-                self.gpio.output(self.pin1, self.gpio.HIGH)
-            else:
-                self.gpio.output(self.pin1, self.gpio.LOW)
-
             # Set the PWM duty cycle
             pwm_duty_cycle = abs(speed) * 100 / 255
-            pwm = self.gpio.PWM(self._pin1, 100)  # 100 Hz frequency
-            pwm.start(pwm_duty_cycle)
+            self.pwm1.ChangeDutyCycle(pwm_duty_cycle)
 
         elif self.mode == Mode.PWM:
             if speed >= 0:
                 self.gpio.output(self.pin1, self.gpio.HIGH)
                 self.gpio.output(self.pin2, self.gpio.LOW)
             else:
-                self.gpio.output(self._pin1, self.gpio.LOW)
+                self.gpio.output(self.pin1, self.gpio.LOW)
                 self.gpio.output(self.pin2, self.gpio.HIGH)
 
             # Set the PWM duty cycle
             pwm_duty_cycle = abs(speed) * 100 / 255
-            pwm1 = self.gpio.PWM(self.pin1, 100)  # 100 Hz frequency
-            pwm2 = self.gpio.PWM(self.pin2, 100)  # 100 Hz frequency
-            pwm1.start(pwm_duty_cycle)
-            pwm2.start(pwm_duty_cycle)
+            self.pwm1.ChangeDutyCycle(pwm_duty_cycle)
+            self.pwm2.ChangeDutyCycle(pwm_duty_cycle)
 
     # Assumes a normalized speed value in the range (-1, 1)
     def setSpeedNorm(self, speed):
@@ -92,4 +85,7 @@ class CytronMD():
         self.setSpeed(abs_speed)
 
     def cleanup(self):
+        if self.mode == Mode.PWM:
+            self.pwm1.stop()
+            self.pwm2.stop()
         self.gpio.cleanup()
